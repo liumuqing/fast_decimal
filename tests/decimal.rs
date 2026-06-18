@@ -15,6 +15,22 @@ fn parses_and_displays_fixed_scale_values() {
 }
 
 #[test]
+fn display_honors_formatter_precision_and_padding() {
+    let value = Decimal::from_str("1.239").unwrap();
+    let negative = Decimal::from_str("-1.2").unwrap();
+    let integer = Decimal::from_str("42").unwrap();
+
+    assert_eq!(format!("{value:.2}"), "1.23");
+    assert_eq!(format!("{value:.0}"), "1");
+    assert_eq!(format!("{integer:.3}"), "42.000");
+    assert_eq!(format!("{negative:.4}"), "-1.2000");
+    assert_eq!(format!("{value:>8.2}"), "    1.23");
+    assert_eq!(format!("{value:<8.2}"), "1.23    ");
+    assert_eq!(format!("{value:+.2}"), "+1.23");
+    assert_eq!(format!("{value:08.2}"), "00001.23");
+}
+
+#[test]
 fn from_str_rounds_extra_fractional_digits() {
     assert_eq!(
         Decimal::from_str("1.1234567890123").unwrap().to_string(),
