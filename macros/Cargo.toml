@@ -1,0 +1,18 @@
+[package]
+name = "fast_decimal_macros"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Macros for fast_decimal"
+readme = "../README.md"
+repository = "https://github.com/JigglyPuffs/fast_decimal"
+categories = ["data-structures", "mathematics"]
+keywords = ["decimal", "fixed-point", "finance", "web3"]
+rust-version = "1.82"
+
+[lib]
+proc-macro = true
+
+[features]
+default = []
+rust_decimal_path = []

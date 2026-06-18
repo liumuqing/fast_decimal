@@ -1,0 +1,7 @@
+error: decimal literal has more than 12 fractional digits
+ --> tests/ui/dec_too_many_digits.rs:4:22
+  |
+4 | const BAD: Decimal = dec!(1.1234567890121);
+  |                      ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the macro `dec` (in Nightly builds, run with -Z macro-backtrace for more info)
