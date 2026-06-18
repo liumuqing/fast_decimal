@@ -69,7 +69,7 @@ Use checked APIs when failures should be explicit:
 let z = x.checked_mul(y);
 ```
 
-Multiplication and division currently use `i128` intermediate arithmetic. This is fast, but conservative near the limits of `i128`.
+Multiplication and division use a fast `i128` path first, then fall back to internal wide arithmetic when the intermediate product would overflow.
 
 ## Serde
 

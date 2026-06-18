@@ -20,9 +20,8 @@
 //! - ordinary arithmetic operators panic on overflow or division by zero,
 //!   matching the ergonomic model of `rust_decimal`.
 //! - `checked_*` methods return `None` instead.
-//! - multiplication and division currently use `i128` intermediate arithmetic,
-//!   so `checked_mul` / `checked_div` may return `None` when the final scaled
-//!   result would fit but the intermediate product does not.
+//! - multiplication and division use internal wide arithmetic when the fast
+//!   `i128` intermediate path would overflow.
 //!
 //! # Examples
 //!
@@ -162,10 +161,15 @@ impl Decimal {
     }
 
     pub fn checked_mul(self, rhs: Self) -> Option<Self> {
-        self.raw
-            .checked_mul(rhs.raw)?
-            .checked_div(SCALE_FACTOR)
-            .map(Self::from_raw)
+        if let Some(raw) = self
+            .raw
+            .checked_mul(rhs.raw)
+            .and_then(|raw| raw.checked_div(SCALE_FACTOR))
+        {
+            return Some(Self::from_raw(raw));
+        }
+
+        checked_mul_wide(self.raw, rhs.raw).map(Self::from_raw)
     }
 
     pub fn checked_div(self, rhs: Self) -> Option<Self> {
@@ -173,10 +177,15 @@ impl Decimal {
             return None;
         }
 
-        self.raw
-            .checked_mul(SCALE_FACTOR)?
-            .checked_div(rhs.raw)
-            .map(Self::from_raw)
+        if let Some(raw) = self
+            .raw
+            .checked_mul(SCALE_FACTOR)
+            .and_then(|raw| raw.checked_div(rhs.raw))
+        {
+            return Some(Self::from_raw(raw));
+        }
+
+        checked_div_wide(self.raw, rhs.raw).map(Self::from_raw)
     }
 
     pub fn checked_neg(self) -> Option<Self> {
@@ -592,6 +601,144 @@ fn parse_decimal(s: &str) -> Result<Decimal, DecimalError> {
     signed_from_abs(raw_abs, negative)
         .map(Decimal::from_raw)
         .ok_or(DecimalError::Overflow)
+}
+
+fn checked_mul_wide(lhs: i128, rhs: i128) -> Option<i128> {
+    let negative = (lhs < 0) ^ (rhs < 0);
+    let lhs_abs = abs_i128_to_u128(lhs);
+    let rhs_abs = abs_i128_to_u128(rhs);
+    let product = U256::mul_u128(lhs_abs, rhs_abs);
+    let quotient = product.div_u128_to_u128(SCALE_FACTOR_U128)?;
+
+    signed_from_abs(quotient, negative)
+}
+
+fn checked_div_wide(lhs: i128, rhs: i128) -> Option<i128> {
+    debug_assert!(rhs != 0);
+
+    let negative = (lhs < 0) ^ (rhs < 0);
+    let lhs_abs = abs_i128_to_u128(lhs);
+    let rhs_abs = abs_i128_to_u128(rhs);
+    let numerator = U256::mul_u128(lhs_abs, SCALE_FACTOR_U128);
+    let quotient = numerator.div_u128_to_u128(rhs_abs)?;
+
+    signed_from_abs(quotient, negative)
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+struct U256 {
+    hi: u128,
+    lo: u128,
+}
+
+impl U256 {
+    const ZERO: Self = Self { hi: 0, lo: 0 };
+
+    const fn from_u128(value: u128) -> Self {
+        Self { hi: 0, lo: value }
+    }
+
+    fn mul_u128(lhs: u128, rhs: u128) -> Self {
+        const MASK: u128 = u64::MAX as u128;
+
+        let lhs_lo = lhs & MASK;
+        let lhs_hi = lhs >> 64;
+        let rhs_lo = rhs & MASK;
+        let rhs_hi = rhs >> 64;
+
+        let p0 = lhs_lo * rhs_lo;
+        let p1 = lhs_lo * rhs_hi;
+        let p2 = lhs_hi * rhs_lo;
+        let p3 = lhs_hi * rhs_hi;
+
+        let lo_low = p0 & MASK;
+        let mid = (p0 >> 64) + (p1 & MASK) + (p2 & MASK);
+        let lo_high = mid & MASK;
+        let hi = p3 + (p1 >> 64) + (p2 >> 64) + (mid >> 64);
+
+        Self {
+            hi,
+            lo: lo_low | (lo_high << 64),
+        }
+    }
+
+    fn div_u128_to_u128(self, divisor: u128) -> Option<u128> {
+        debug_assert!(divisor != 0);
+        let quotient = self.div_u256(Self::from_u128(divisor));
+        quotient.to_u128()
+    }
+
+    fn div_u256(self, divisor: Self) -> Self {
+        debug_assert!(divisor != Self::ZERO);
+
+        let mut quotient = Self::ZERO;
+        let mut remainder = Self::ZERO;
+
+        for bit in (0..256).rev() {
+            remainder.shl1_add_bit(self.bit(bit));
+
+            if remainder >= divisor {
+                remainder.sub_assign(divisor);
+                quotient.set_bit(bit);
+            }
+        }
+
+        quotient
+    }
+
+    fn to_u128(self) -> Option<u128> {
+        if self.hi == 0 {
+            Some(self.lo)
+        } else {
+            None
+        }
+    }
+
+    fn bit(self, bit: u32) -> bool {
+        debug_assert!(bit < 256);
+
+        if bit < 128 {
+            ((self.lo >> bit) & 1) != 0
+        } else {
+            ((self.hi >> (bit - 128)) & 1) != 0
+        }
+    }
+
+    fn set_bit(&mut self, bit: u32) {
+        debug_assert!(bit < 256);
+
+        if bit < 128 {
+            self.lo |= 1u128 << bit;
+        } else {
+            self.hi |= 1u128 << (bit - 128);
+        }
+    }
+
+    fn shl1_add_bit(&mut self, bit: bool) {
+        self.hi = (self.hi << 1) | (self.lo >> 127);
+        self.lo = (self.lo << 1) | u128::from(bit);
+    }
+
+    fn sub_assign(&mut self, rhs: Self) {
+        let (lo, borrow) = self.lo.overflowing_sub(rhs.lo);
+        self.lo = lo;
+        self.hi = self.hi - rhs.hi - u128::from(borrow);
+    }
+}
+
+impl Ord for U256 {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.hi.cmp(&other.hi) {
+            Ordering::Equal => self.lo.cmp(&other.lo),
+            ordering => ordering,
+        }
+    }
+}
+
+impl PartialOrd for U256 {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 fn scale_mantissa(mantissa: i128, scale: u32, strategy: RoundingStrategy) -> Option<Decimal> {

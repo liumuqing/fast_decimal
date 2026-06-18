@@ -77,6 +77,46 @@ fn arithmetic_uses_decimal_scale() {
 }
 
 #[test]
+fn multiplication_uses_wide_intermediate_when_needed() {
+    let lhs = Decimal::from_raw(10_i128.pow(24));
+    let rhs = Decimal::from_raw(10_i128.pow(24));
+
+    let product = lhs.checked_mul(rhs).unwrap();
+
+    assert_eq!(product.raw(), 10_i128.pow(36));
+    assert_eq!(product.to_string(), "1000000000000000000000000");
+}
+
+#[test]
+fn division_uses_wide_intermediate_when_needed() {
+    let lhs = Decimal::from_raw(10_i128.pow(36));
+    let rhs = Decimal::from_raw(10_i128.pow(24));
+
+    let quotient = lhs.checked_div(rhs).unwrap();
+
+    assert_eq!(quotient.raw(), 10_i128.pow(24));
+    assert_eq!(quotient.to_string(), "1000000000000");
+}
+
+#[test]
+fn wide_arithmetic_preserves_sign_and_overflow_checks() {
+    let lhs = Decimal::from_raw(-10_i128.pow(24));
+    let rhs = Decimal::from_raw(10_i128.pow(24));
+
+    assert_eq!(lhs.checked_mul(rhs).unwrap().raw(), -10_i128.pow(36));
+    assert_eq!(
+        Decimal::from_raw(10_i128.pow(36))
+            .checked_div(Decimal::from_raw(-10_i128.pow(24)))
+            .unwrap()
+            .raw(),
+        -10_i128.pow(24)
+    );
+
+    assert_eq!(Decimal::MAX.checked_mul(Decimal::MAX), None);
+    assert_eq!(Decimal::MAX.checked_div(Decimal::from_raw(1)), None);
+}
+
+#[test]
 fn rounding_strategies_cover_polymarket_usage() {
     let value = Decimal::from_str("1.23456").unwrap();
     let neg = Decimal::from_str("-1.23456").unwrap();
