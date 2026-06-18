@@ -5,9 +5,9 @@ edition = "2021"
 license = "MIT"
 description = "Macros for fast_decimal"
 readme = "../README.md"
-repository = "https://github.com/JigglyPuffs/fast_decimal"
+repository = "https://github.com/liumuqing/fast_decimal"
 categories = ["data-structures", "mathematics"]
-keywords = ["decimal", "fixed-point", "finance", "web3"]
+keywords = ["decimal", "fixed-point", "numeric", "arithmetic"]
 rust-version = "1.82"
 
 [lib]

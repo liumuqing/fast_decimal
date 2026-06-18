@@ -1,4 +1,4 @@
-//! A fast fixed-scale decimal for finance-oriented Rust code.
+//! A fast fixed-scale decimal for Rust code.
 //!
 //! `Decimal` stores a signed `i128` raw value with a fixed scale of 12:
 //!

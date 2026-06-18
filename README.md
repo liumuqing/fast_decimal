@@ -1,6 +1,6 @@
 # fast_decimal
 
-`fast_decimal` is a fast fixed-scale decimal for finance-oriented Rust code.
+`fast_decimal` is a fast fixed-scale decimal for Rust code.
 
 It stores a signed `i128` raw value with a fixed scale of 12:
 
@@ -18,7 +18,7 @@ pub struct Decimal {
 
 ## Goals
 
-- Fast arithmetic for off-chain financial calculations.
+- Fast arithmetic with a fixed decimal scale.
 - Small `rust_decimal`-style API surface for easier migration.
 - Deterministic decimal behavior with no floating point in core arithmetic.
 - Compile-time decimal literals through `fast_decimal_macros::dec!`.
@@ -27,8 +27,8 @@ pub struct Decimal {
 
 - Full `rust_decimal` compatibility.
 - Dynamic scale semantics.
-- Lossless representation of 18-decimal token smallest units.
-- Full EVM `uint256` balance modeling.
+- Arbitrary precision arithmetic.
+- Dynamic scale arithmetic.
 
 ## Rounding
 

@@ -3,11 +3,11 @@ name = "fast_decimal"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-description = "A fast fixed-scale decimal for Web3 finance"
+description = "A fast fixed-scale decimal for Rust"
 readme = "README.md"
-repository = "https://github.com/JigglyPuffs/fast_decimal"
+repository = "https://github.com/liumuqing/fast_decimal"
 categories = ["data-structures", "mathematics"]
-keywords = ["decimal", "fixed-point", "finance", "web3"]
+keywords = ["decimal", "fixed-point", "numeric", "arithmetic"]
 rust-version = "1.82"
 
 [workspace]
