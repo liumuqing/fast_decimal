@@ -1,12 +1,22 @@
 use crate::rounding::{round_to_unit, scale_mantissa};
 use crate::wide::{checked_div_wide, checked_mul_wide};
 use crate::{DecimalError, RoundingStrategy, SCALE, SCALE_FACTOR};
+use core::hash::{Hash, Hasher};
 
 #[repr(transparent)]
-#[derive(Clone, Copy, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Decimal {
     pub(crate) raw: i128,
 }
+
+impl Hash for Decimal {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u64(self.raw as u64);
+    }
+}
+
+#[cfg(feature = "nohash-hasher")]
+impl nohash_hasher::IsEnabled for Decimal {}
 
 impl Decimal {
     pub const ZERO: Self = Self { raw: 0 };
