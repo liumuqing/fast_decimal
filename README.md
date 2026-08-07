@@ -81,6 +81,30 @@ fast_decimal = { version = "0.1", features = ["serde"] }
 
 Serialization emits a decimal string. Deserialization accepts decimal strings and JSON numbers.
 
+## Integer maps and sets
+
+Enable the `nohash-hasher` feature to use `Decimal` directly with
+`nohash_hasher::IntMap` and `nohash_hasher::IntSet`:
+
+```toml
+fast_decimal = { version = "0.1", features = ["nohash-hasher"] }
+```
+
+```rust
+use fast_decimal::Decimal;
+use nohash_hasher::{IntMap, IntSet};
+
+let mut quantities = IntMap::<Decimal, Decimal>::default();
+quantities.insert(Decimal::ONE, Decimal::from_integer(2));
+
+let mut prices = IntSet::<Decimal>::default();
+prices.insert(Decimal::ONE);
+```
+
+`Decimal` hashes its fixed-scale raw value with one `write_u64` call using the
+low 64 bits. Values that differ only in the upper 64 bits collide but remain
+distinct because `IntMap` and `IntSet` still compare keys with `Eq`.
+
 ## Cargo Alias Migration
 
 For code that imports `rust_decimal` and `rust_decimal_macros`, a local migration can use package aliases:

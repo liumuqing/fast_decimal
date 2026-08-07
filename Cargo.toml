@@ -20,6 +20,7 @@ path = "src/lib.rs"
 [dependencies]
 crypto-bigint = { version = "0.7.4", default-features = false }
 fast_decimal_macros = { version = "0.1.0", path = "macros", optional = true }
+nohash-hasher = { version = "0.2", optional = true }
 serde = { version = "1", optional = true }
 
 [dev-dependencies]
@@ -30,4 +31,5 @@ trybuild = "1"
 [features]
 default = []
 macros = ["dep:fast_decimal_macros"]
+nohash-hasher = ["dep:nohash-hasher"]
 serde = ["dep:serde"]
