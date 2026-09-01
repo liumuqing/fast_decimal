@@ -162,4 +162,33 @@ impl Decimal {
     pub fn checked_from_integer(value: i128) -> Option<Self> {
         value.checked_mul(SCALE_FACTOR).map(Self::from_raw)
     }
+
+    /// Returns `self` raised to the power of `exp` using exponentiation by squaring.
+    ///
+    /// Panics on overflow. For a non-panicking variant, use [`checked_pow_u32`](Self::checked_pow_u32).
+    pub fn pow_u32(self, exp: u32) -> Self {
+        self.checked_pow_u32(exp).expect("Decimal power overflow")
+    }
+
+    /// Returns `self` raised to the power of `exp` using exponentiation by squaring.
+    ///
+    /// Returns `None` on overflow. `pow_u32(0)` is always `Decimal::ONE`.
+    pub fn checked_pow_u32(self, exp: u32) -> Option<Self> {
+        if exp == 0 {
+            return Some(Decimal::ONE);
+        }
+        let mut base = self;
+        let mut result = Decimal::ONE;
+        let mut remaining = exp;
+        while remaining > 0 {
+            if remaining & 1 == 1 {
+                result = result.checked_mul(base)?;
+            }
+            remaining >>= 1;
+            if remaining > 0 {
+                base = base.checked_mul(base)?;
+            }
+        }
+        Some(result)
+    }
 }

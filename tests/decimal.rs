@@ -199,3 +199,23 @@ fn operators_panic_on_overflow_or_division_by_zero() {
     assert!(std::panic::catch_unwind(|| -Decimal::MIN).is_err());
     assert!(std::panic::catch_unwind(|| Decimal::ONE / Decimal::ZERO).is_err());
 }
+
+#[test]
+fn pow_u32_covers_basic_and_edge_cases() {
+    let two = Decimal::from(2u64);
+    let half = Decimal::from_str("0.5").unwrap();
+
+    assert_eq!(two.pow_u32(0), Decimal::ONE);
+    assert_eq!(two.pow_u32(1), two);
+    assert_eq!(two.pow_u32(2), Decimal::from(4u64));
+    assert_eq!(two.pow_u32(10), Decimal::from(1024u64));
+    assert_eq!(half.pow_u32(2).to_string(), "0.25");
+    assert_eq!(half.pow_u32(3).to_string(), "0.125");
+}
+
+#[test]
+fn checked_pow_u32_reports_overflow() {
+    assert_eq!(Decimal::MAX.checked_pow_u32(2), None);
+    assert_eq!(Decimal::ZERO.checked_pow_u32(5), Some(Decimal::ZERO));
+    assert_eq!(Decimal::ONE.checked_pow_u32(1000), Some(Decimal::ONE));
+}
