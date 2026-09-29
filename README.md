@@ -119,3 +119,41 @@ The `rust_decimal_path` feature makes `dec!` expand to `::rust_decimal::Decimal:
 ## License
 
 Licensed under the MIT license. See [LICENSE](LICENSE).
+
+## Atomic decimals
+
+Enable `atomic` to use `AtomicDecimal`, backed by `portable-atomic::AtomicI128`:
+
+```toml
+fast_decimal = { version = "0.1", features = ["atomic"] }
+```
+
+```rust
+use fast_decimal::{AtomicDecimal, Decimal};
+use std::sync::atomic::Ordering;
+
+let balance = AtomicDecimal::new(Decimal::from(10));
+let previous = balance.checked_fetch_sub(Decimal::ONE, Ordering::SeqCst).unwrap();
+assert_eq!(previous, Decimal::from(10));
+assert_eq!(balance.load(Ordering::SeqCst), Decimal::from(9));
+```
+
+The interface follows integer atomics: load/store/swap, strong and weak CAS,
+fetch_add/sub/min/max, fetch_update, get_mut and into_inner. All values retain
+Decimal's full i128 range and 12-place precision. `Default`, `From<Decimal>` and
+`Debug` are implemented; Send/Sync are automatic. There is no implicit cloning,
+comparison or arithmetic assignment of an atomic value.
+
+Unlike ordinary Decimal arithmetic, `fetch_add/sub` wrap the raw i128 on overflow.
+`checked_fetch_add/sub` return `Ok(previous)` or `Err(observed)` on overflow
+without writing. They permit negative results. For a nonnegative balance, use
+`fetch_update` to combine the balance check and subtraction in one atomic update;
+separate load and subtraction operations can race. Its closure may run repeatedly
+and must not rely on exactly-once side effects.
+
+Memory ordering and invalid-ordering panics match the underlying integer atomics.
+Debug formatting performs a Relaxed load. A single atomic value does not provide
+a transaction across several balances or positions. Lock freedom is platform
+dependent: `is_lock_free()` reports runtime support and `is_always_lock_free()`
+reports the compile-time guarantee. Unsupported targets use the dependency's lock
+fallback. No raw-pointer or bitwise decimal operations are exposed.

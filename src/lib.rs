@@ -64,3 +64,8 @@ pub use rounding::RoundingStrategy;
 
 pub const SCALE: u32 = 12;
 pub const SCALE_FACTOR: i128 = 1_000_000_000_000;
+
+#[cfg(feature = "atomic")]
+mod atomic;
+#[cfg(feature = "atomic")]
+pub use atomic::AtomicDecimal;
