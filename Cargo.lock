@@ -53,6 +53,7 @@ dependencies = [
  "crypto-bigint",
  "fast_decimal_macros",
  "nohash-hasher",
+ "portable-atomic",
  "serde",
  "serde_json",
  "trybuild",
@@ -110,6 +111,12 @@ checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
 ]
+
+[[package]]
+name = "portable-atomic"
+version = "1.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05c8b63e8d9609db387f0324918f81d68fe27748f084ef092fb35954d0539a85"
 
 [[package]]
 name = "proc-macro2"
