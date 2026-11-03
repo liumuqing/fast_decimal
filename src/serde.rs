@@ -77,6 +77,24 @@ impl<'de> serde::Deserialize<'de> for Decimal {
                     .map_err(|_| E::custom(DecimalError::Overflow))
             }
 
+            fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
+            where
+                M: serde::de::MapAccess<'de>,
+            {
+                // serde_json retains numeric text with arbitrary_precision.
+                // Delegate validation to its public Number type rather than
+                // depending on its private map marker.
+                let number = <serde_json::Number as serde::Deserialize>::deserialize(
+                    serde::de::value::MapAccessDeserializer::new(&mut map),
+                )?;
+                if map.next_key::<serde::de::IgnoredAny>()?.is_some() {
+                    return Err(serde::de::Error::custom(
+                        "unexpected field after JSON number",
+                    ));
+                }
+                Decimal::from_str(number.as_str()).map_err(serde::de::Error::custom)
+            }
+
             fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
             where
                 E: serde::de::Error,

@@ -79,7 +79,22 @@ Enable the `serde` feature:
 fast_decimal = { version = "0.1", features = ["serde"] }
 ```
 
-Serialization emits a decimal string. Deserialization accepts decimal strings and JSON numbers.
+Serialization emits a decimal string. Deserialization accepts decimal strings and
+JSON numbers, including scientific notation. The existing `serde` feature enables
+`serde_json/arbitrary_precision` automatically: JSON numeric text is parsed directly
+into Decimal without an intermediate `f64`, including through `serde_json::Value`.
+No additional feature or field adapter is required. Other Serde formats can still
+provide integers, strings or floats; precision already lost in a float cannot be
+recovered. Parsing rounds once to the native 12 decimal places, not arbitrary
+precision arithmetic.
+
+```rust
+# #[cfg(feature = "serde")] {
+use fast_decimal::Decimal;
+let value: Decimal = serde_json::from_str("1234567890.123456789").unwrap();
+assert_eq!(value.to_string(), "1234567890.123456789");
+# }
+```
 
 ## Integer maps and sets
 
