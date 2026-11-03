@@ -65,7 +65,7 @@ fn rejects_invalid_parse_inputs() {
         DecimalError::InvalidSyntax
     );
     assert_eq!(
-        Decimal::from_str("1e3").unwrap_err(),
+        Decimal::from_str("1e").unwrap_err(),
         DecimalError::InvalidSyntax
     );
 }
@@ -218,4 +218,71 @@ fn checked_pow_u32_reports_overflow() {
     assert_eq!(Decimal::MAX.checked_pow_u32(2), None);
     assert_eq!(Decimal::ZERO.checked_pow_u32(5), Some(Decimal::ZERO));
     assert_eq!(Decimal::ONE.checked_pow_u32(1000), Some(Decimal::ONE));
+}
+
+#[test]
+fn scientific_notation_rounds_once_at_the_final_scale() {
+    for (input, expected) in [
+        ("1e3", "1000"),
+        ("+1.25E+2", "125"),
+        ("-5E-7", "-0.0000005"),
+        ("1.234567890123456789e9", "1234567890.123456789"),
+        ("5e-13", "0.000000000001"),
+        ("-5e-13", "-0.000000000001"),
+        ("4.999999999e-13", "0"),
+        ("0.000123e5", "12.3"),
+        ("10000000000000000000000000000000000000000e-40", "1"),
+        ("1e-999999999999999999999999", "0"),
+        ("0e999999999999999999999999", "0"),
+        ("1_000.00e-3", "1"),
+        (".5e1", "5"),
+        ("1.e1", "10"),
+    ] {
+        assert_eq!(
+            input.parse::<Decimal>().unwrap(),
+            expected.parse::<Decimal>().unwrap(),
+            "{input}"
+        );
+    }
+}
+
+#[test]
+fn scientific_notation_checks_syntax_and_signed_limits() {
+    for input in [
+        "e3", ".e3", "1e", "1e+", "1e-", "1ee2", "1e2.0", "1e 2", "1.2.3e0", "1e_2", "1e2_",
+        "1e--2",
+    ] {
+        assert_eq!(
+            input.parse::<Decimal>(),
+            Err(DecimalError::InvalidSyntax),
+            "{input}"
+        );
+    }
+    for input in [
+        "1e27",
+        "-1e27",
+        "1e999999999999999999999999",
+        "170141183460469231731687303715884105728e-12",
+        "-170141183460469231731687303715884105729e-12",
+    ] {
+        assert_eq!(
+            input.parse::<Decimal>(),
+            Err(DecimalError::Overflow),
+            "{input}"
+        );
+    }
+    assert_eq!(
+        "170141183460469231731687303715884105727e-12"
+            .parse::<Decimal>()
+            .unwrap()
+            .raw(),
+        i128::MAX
+    );
+    assert_eq!(
+        "-170141183460469231731687303715884105728e-12"
+            .parse::<Decimal>()
+            .unwrap()
+            .raw(),
+        i128::MIN
+    );
 }

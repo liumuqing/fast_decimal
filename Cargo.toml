@@ -23,6 +23,7 @@ crypto-bigint = { version = "0.7.4", default-features = false }
 fast_decimal_macros = { version = "0.1.0", path = "macros", optional = true }
 nohash-hasher = { version = "0.2", optional = true }
 serde = { version = "1", optional = true }
+serde_json = { version = "1", optional = true, features = ["arbitrary_precision"] }
 
 [dev-dependencies]
 fast_decimal_macros = { version = "0.1.0", path = "macros" }
@@ -34,4 +35,4 @@ default = []
 atomic = ["dep:portable-atomic"]
 macros = ["dep:fast_decimal_macros"]
 nohash-hasher = ["dep:nohash-hasher"]
-serde = ["dep:serde"]
+serde = ["dep:serde", "dep:serde_json"]
